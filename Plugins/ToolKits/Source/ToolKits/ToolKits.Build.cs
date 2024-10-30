@@ -26,6 +26,9 @@ public class ToolKits : ModuleRules
 			new string[]
 			{
 				"Core",
+				"HTTP",
+				"Json",
+				"JsonUtilities",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
