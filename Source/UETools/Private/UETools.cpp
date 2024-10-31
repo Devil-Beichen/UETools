@@ -3,4 +3,4 @@
 #include "UETools.h"
 #include "Modules/ModuleManager.h"
 
-IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, UETools, "UETools" );
+IMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, UETools, "UETools");

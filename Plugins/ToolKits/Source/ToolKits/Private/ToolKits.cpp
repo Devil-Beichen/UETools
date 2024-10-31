@@ -7,19 +7,23 @@
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "YC_Log.h"
 #include "Logging/LogMacros.h"
 
+#include "Misc/Paths.h"
+#include "Misc/MessageDialog.h"
+#include "Misc/FileHelper.h"
 
 #define LOCTEXT_NAMESPACE "FToolKitsModule"
 
 // 密钥
-FString MyKey = FString::Printf(TEXT("YiChen"));
+static FString MyKey = FString::Printf(TEXT("YiChen"));
 
 // 许可证到期日期
-static FString LicenceTime = "2025.01.01-00.00.00";
+static FString LicenceTime = "2025.01.01-00.00.00"; // 年/月/日-时/分/秒
 
 // 缓存的有效时间（秒）
-static const int32 CacheDuration = 60 * 60 * 24 * 1; // 60 * 60 * 24 * 1; // （60*60 = 1小时） 缓存1天
+static constexpr int32 CacheDuration = 60 * 60 * 24 * 1; // 60 * 60 * 24 * 1; // （60*60 = 1小时） 缓存1天
 
 // 最大次数
 static constexpr int32 MaxRetryCount = 9;
@@ -29,12 +33,11 @@ static int32 CurrentRetryCount = 0;
 
 void FToolKitsModule::StartupModule()
 {
+	LoadConfig();
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-
+	YICHEN_LOG(Warning, "当前自定义打印的时间：%s", *FDateTime::Now().ToString());
 	// 读取缓存数据
 	LoadCache();
-	// 检查许可证有效性
-	CheckLicenseValidity();
 }
 
 void FToolKitsModule::ShutdownModule()
@@ -51,13 +54,13 @@ void FToolKitsModule::CheckLicenseValidity()
 	// 检查缓存是否有效
 	if (CachedLicenseValid && FDateTime::Now() - LastCheckTime < FTimespan::FromSeconds(CacheDuration))
 	{
-		UE_LOG(LogTemp, Display, TEXT("逸辰：：缓存有效！！！"));
-		Authorization(true);
+		YICHEN_LOG(Display, "缓存有效！！！");
+		Authorization(IsLicenseValid(LastCheckTime));
 		return;
 	}
 	else
 	{
-		UE_LOG(LogTemp, Display, TEXT("逸辰：：缓存无效！！！"));
+		YICHEN_LOG(Warning, "缓存无效！！！");
 	}
 
 	// 创建一个HTTP请求对象 这里使用的是UE的HTTP模块
@@ -81,6 +84,7 @@ void FToolKitsModule::CheckLicenseValidity()
 // HTTP请求完成时的回调函数
 void FToolKitsModule::OnTimeResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
+	YICHEN_LOG(Log, "正在进行(%d/%d)验证..", CurrentRetryCount, MaxRetryCount);
 	if (bWasSuccessful && Response.IsValid())
 	{
 		// 解析响应中的时间
@@ -132,7 +136,7 @@ void FToolKitsModule::Authorization(bool bValid)
 	// 判断授权
 	if (bValid)
 	{
-		UE_LOG(LogTemp, Display, TEXT("插件授权有效！！！"));
+		YICHEN_LOG(Display, "插件授权有效！！！");
 	}
 	else
 	{
@@ -140,7 +144,7 @@ void FToolKitsModule::Authorization(bool bValid)
 			                     "\tPlease contact the plug author for permission！！！\n"
 			                     "\t(请联系插头作者获得许可！！！) \n"
 			                     "\t2394439184@qq.com")));
-		UE_LOG(LogTemp, Error, TEXT("插件授权无效"));
+		UE_LOG(YiChenLog, Error, TEXT("插件授权无效"));
 
 		FGenericPlatformMisc::RequestExit(false);
 	}
@@ -153,12 +157,12 @@ void FToolKitsModule::RerequestNetwork()
 	if (CurrentRetryCount < MaxRetryCount)
 	{
 		CurrentRetryCount++;
-		UE_LOG(LogTemp, Warning, TEXT("请求失败，正在重试...（%d/%d）"), CurrentRetryCount, MaxRetryCount);
+		YICHEN_LOG(Warning, "请求失败，正在重试...（%d/%d）", CurrentRetryCount, MaxRetryCount);
 		CheckLicenseValidity();
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("无法获取网络时间"));
+		YICHEN_LOG(Error, "无法获取网络时间");
 		Authorization(IsLicenseValid());
 	}
 }
@@ -181,23 +185,14 @@ FString XorEncryptDecrypt(const FString& Input, const FString& Key)
 	return Output;
 }
 
-// 保存缓存数据
-void FToolKitsModule::SaveCache() const
+// 写入加密数据
+void FToolKitsModule::EncryptingData() const
 {
-	// 文件路径
-	FString Path = FPaths::Combine(FPaths::ProjectPluginsDir(),TEXT("ToolKits/Saved"));
-	FString FileName = TEXT("ConfigCache.ini");
-	FString FilePath = FPaths::Combine(Path, FileName);
-
-	// 确保目录存在
-	if (!FPaths::DirectoryExists(Path))
-	{
-		FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*Path);
-	}
-
 	// 将布尔值和时间转换为字符串
 	FString ValidStr = CachedLicenseValid ? TEXT("1") : TEXT("0");
 	FString TimeStr = LastCheckTime.ToString();
+
+	YICHEN_LOG(Display, "保存的时间：%s", *LastCheckTime.ToString());
 
 	// 将字符串连接起来
 	FString Data = ValidStr + TEXT("\n") + TimeStr;
@@ -206,16 +201,32 @@ void FToolKitsModule::SaveCache() const
 
 	// 将加密后的数据保存到文件
 	FFileHelper::SaveStringToFile(EncryptedData, *FilePath);
+}
 
-	UE_LOG(LogTemp, Display, TEXT("保存的时间：%s"), *LastCheckTime.ToString());
+// 保存缓存数据
+void FToolKitsModule::SaveCache() const
+{
+	// 确保目录存在
+	if (!FPaths::FileExists(FilePath))
+	{
+		FFileHelper::SaveStringToFile(TEXT(""), *FilePath, FFileHelper::EEncodingOptions::ForceUTF8);
+		UE_LOG(YiChenLog, Log, TEXT("%s\t缓存文件创建成功: %s"), *FDateTime::Now().ToString(), *FilePath);
+		EncryptingData();
+	}
+	else
+	{
+		EncryptingData();
+	}
 }
 
 void FToolKitsModule::LoadCache()
 {
-	// 文件路径
-	FString Path = FPaths::Combine(FPaths::ProjectPluginsDir(),TEXT("ToolKits/Saved"));
-	FString FileName = TEXT("ConfigCache.ini");
-	FString FilePath = FPaths::Combine(Path, FileName);
+	// 保存路径
+	Path = FPaths::Combine(FPaths::ProjectPluginsDir(),TEXT("ToolKits/Saved"));
+	// 缓存文件名称
+	CacheFileName = TEXT("ToolKitsCache.ini");
+	// 缓存文件路径
+	FilePath = FPaths::Combine(Path, CacheFileName);
 
 	if (FPaths::FileExists(FilePath))
 	{
@@ -235,10 +246,12 @@ void FToolKitsModule::LoadCache()
 
 				FDateTime::Parse(*Parts[1], LastCheckTime);
 
-				UE_LOG(LogTemp, Display, TEXT("逸辰读取的时间：%s\t当前时间%s"), *LastCheckTime.ToString(), *FDateTime::Now().ToString());
+				YICHEN_LOG(Display, "读取的时间：%s\t当前时间%s", *LastCheckTime.ToString(), *FDateTime::Now().ToString());
 			}
 		}
 	}
+	// 检查许可证有效性
+	CheckLicenseValidity();
 }
 
 /*// 创建文件
@@ -246,7 +259,7 @@ void FToolKitsModule::CreateFiles(const FString& Path, const FString& FileName)
 {
 	if (FPaths::FileExists(Path + "/" + FileName))
 	{
-		UE_LOG(LogTemp, Display, TEXT("文件有效！！！"));
+		UE_LOG(YiChenLog, Display, TEXT("文件有效！！！"));
 		return;
 	}
 	else
@@ -256,7 +269,7 @@ void FToolKitsModule::CreateFiles(const FString& Path, const FString& FileName)
 
 		// 创建文件
 		FFileHelper::SaveStringToFile(TEXT(""), *FilePath);
-		UE_LOG(LogTemp, Display, TEXT("创建成功！！！"));
+		YICHEN_LOG( Display, "创建成功！！！");
 		return;
 	}
 }*/

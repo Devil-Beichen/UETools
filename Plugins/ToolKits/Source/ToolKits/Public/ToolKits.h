@@ -34,10 +34,20 @@ public:
 	void RerequestNetwork();
 
 private:
+	// 保存路径
+	FString Path;
+	// 缓存文件名称
+	FString CacheFileName;
+	// 缓存文件路径
+	FString FilePath;
+
 	// 缓存许可证是否有效
 	bool CachedLicenseValid = false;
 	// 上次检查时间
 	FDateTime LastCheckTime = FDateTime::MinValue();
+
+	// 写入加密数据
+	void EncryptingData() const;
 
 	// 加载缓存
 	void LoadCache();

@@ -19,7 +19,8 @@ public class FenceWallRelated : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "ToolKits"
             }
         );
     }

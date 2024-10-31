@@ -4,14 +4,12 @@
 
 void FFenceWallRelatedModule::StartupModule()
 {
-    
 }
 
 void FFenceWallRelatedModule::ShutdownModule()
 {
-    
 }
 
 #undef LOCTEXT_NAMESPACE
-    
+
 IMPLEMENT_MODULE(FFenceWallRelatedModule, FenceWallRelated)
