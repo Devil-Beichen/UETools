@@ -144,7 +144,7 @@ void FToolKitsModule::Authorization(bool bValid)
 			                     "\tPlease contact the plug author for permission！！！\n"
 			                     "\t(请联系插头作者获得许可！！！) \n"
 			                     "\t2394439184@qq.com")));
-		UE_LOG(YiChenLog, Error, TEXT("插件授权无效"));
+		YICHEN_LOG(Error, "插件授权无效");
 
 		FGenericPlatformMisc::RequestExit(false);
 	}
@@ -210,7 +210,7 @@ void FToolKitsModule::SaveCache() const
 	if (!FPaths::FileExists(FilePath))
 	{
 		FFileHelper::SaveStringToFile(TEXT(""), *FilePath, FFileHelper::EEncodingOptions::ForceUTF8);
-		UE_LOG(YiChenLog, Log, TEXT("%s\t缓存文件创建成功: %s"), *FDateTime::Now().ToString(), *FilePath);
+		YICHEN_LOG(Log, "%s\t缓存文件创建成功: %s", *FDateTime::Now().ToString(), *FilePath);
 		EncryptingData();
 	}
 	else
