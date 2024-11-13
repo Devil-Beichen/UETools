@@ -25,17 +25,17 @@ class FENCEWALLRELATED_API ASingleFence_Base : public AActor, public IFenceInter
 public:
 	ASingleFence_Base();
 
-protected:
-	virtual void BeginPlay() override;
-
-	// 重写，用于在构造函数中设置属性
-	virtual void OnConstruction(const FTransform& Transform) override;
-
 	// 初始化绑定
 	void InitBind();
 
 	// 初始化基本参数
 	void InitBase();
+
+protected:
+	virtual void BeginPlay() override;
+
+	// 重写，用于在构造函数中设置属性
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 	// 显示围栏
 	virtual void ShowFence_Implementation() override;
@@ -134,6 +134,18 @@ private:
 	FTimerHandle HitTimerHandle;
 
 public:
+	// 设置围栏模型
+	FORCEINLINE void SetFenceMesh(const TObjectPtr<UStaticMesh> NewStaticMesh)
+	{
+		FenceMesh = NewStaticMesh;
+	}
+
+	// 设置阵营颜色
+	FORCEINLINE void SetCampColor(const FLinearColor NewColor)
+	{
+		CampColor = NewColor;
+	}
+
 	/**
 	 * 设置缩放曲线
 	 * @param NewCurve 缩放曲线
