@@ -4,7 +4,6 @@
 #include "SingleFence_Base.h"
 #include "Components/TimelineComponent.h"
 #include "Components/BoxComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 
 ASingleFence_Base::ASingleFence_Base()
 {
@@ -69,17 +68,29 @@ void ASingleFence_Base::InitBind()
 	}
 }
 
-// 初始化基础信息
+// 初始化单个围栏的基础设置
 void ASingleFence_Base::InitBase()
 {
-	if (FenceMesh)
+	// 如果围栏网格已经被指定，则进行以下初始化操作
+	if (FenceMesh && FenceMeshComponent && Box)
 	{
+		// 设置围栏网格组件的静态网格为当前围栏网格
 		FenceMeshComponent->SetStaticMesh(FenceMesh);
-		float NewRadius;
+
+		// 初始化新的位置和盒子扩展变量
 		FVector NewLocation, BoxExtent;
-		UKismetSystemLibrary::GetComponentBounds(FenceMeshComponent, NewLocation, BoxExtent, NewRadius);
-		Box->SetWorldLocation(NewLocation);
+
+		// 获取并设置围栏网格的扩展边界信息
+		NewLocation = FenceMesh->GetExtendedBounds().Origin;
+		BoxExtent = FenceMesh->GetExtendedBounds().BoxExtent;
+
+		// 根据网格的扩展尺寸设置碰撞盒的扩展尺寸
 		Box->SetBoxExtent(BoxExtent);
+
+		// 将碰撞盒的位置设置为网格的边界原点位置
+		Box->SetRelativeLocation(NewLocation);
+
+		// 在所有材质上设置一个向量参数，以应用围栏的颜色
 		FenceMeshComponent->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
 	}
 }
