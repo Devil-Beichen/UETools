@@ -8,6 +8,7 @@
 
 class USplineComponent; // 样条线
 class UHierarchicalInstancedStaticMeshComponent; // 静态网格实例化
+class ASingleFence_Base; // 单一围栏
 
 /**
  * 围栏样条线
@@ -26,7 +27,7 @@ public:
 
 	// 单一围栏
 	UPROPERTY(EditAnywhere, Category="默认")
-	TSubclassOf<class ASingleFence_Base> SingleFenceClass;
+	TSubclassOf<ASingleFence_Base> SingleFenceClass;
 
 	// 显示模型
 	UPROPERTY(EditAnywhere, Category="默认")
@@ -55,6 +56,20 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
+
+	/**
+	* 初始化围栏组件
+	* @param Component	围栏组件
+	* @param NewStaticMesh 新的静态网格
+	*/
+	void InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh);
+
+	/**
+	 * 更新围栏组件
+	 * @param Component 围栏组件
+	 * @param NewStaticMesh 新的静态网格
+	 */
+	void UpdateComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh);
 
 private:
 	// 获取模型长度

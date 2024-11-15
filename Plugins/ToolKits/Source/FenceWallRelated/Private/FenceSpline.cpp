@@ -33,6 +33,32 @@ void AFenceSpline::OnConstruction(const FTransform& Transform)
 	AddDisplayModel();
 }
 
+void AFenceSpline::InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh)
+{
+	// 注册网格组件
+	Component->RegisterComponent();
+	// 设置网格组件的附着关系，使其附着到根组件
+	Component->AttachToComponent(Spline, FAttachmentTransformRules::KeepWorldTransform);
+	// 禁用碰撞，因为此组件不需要与其他物体发生物理碰撞
+	Component->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+	// 在游戏中显示网格组件
+	Component->SetHiddenInGame(false);
+	// 设置网格组件不接收贴花，简化渲染处理
+	Component->bReceivesDecals = false;
+	// 为网格组件设置静态网格，即定义其外观
+	Component->SetStaticMesh(NewStaticMesh);
+	// 设置网格组件的材质参数，此处为营地颜色
+	Component->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
+}
+
+void AFenceSpline::UpdateComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh)
+{
+	// 为网格组件设置静态网格，即定义其外观
+	Component->SetStaticMesh(NewStaticMesh);
+	// 设置网格组件的材质参数，此处为营地颜色
+	Component->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
+}
+
 /**
  * 根据索引获取围栏组件的网格长度
  * 
@@ -73,26 +99,34 @@ TArray<FTransform> AFenceSpline::GetTempTransforms()
 	{
 		ModelLengths.Add(GetMeshLength(i).X);
 	}
-	// 根据显示数量生成临时坐标
-	for (int i = 0; i <= DisplayNum - 1; i++)
+
+	// 创建一个异步任务，处理坐标数组
+	FGraphEventRef TransformsTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this,ModelNum,ModelLengths,&CurrentDistance,&TempTransforms]()
 	{
-		// 余数
-		int32 TempIndex = i % ModelNum;
-		// 实际编号
-		int32 ActualNumber = TempIndex == 0 ? ModelNum - 1 : TempIndex - 1;
-		// 实际间隔
-		float ActualInterval = i == 0 ? 0.f : Interval;
-		// 当前模型长度
-		float IntervalModelLength = i == 0 ? 0.f : ModelLengths[ActualNumber];
-		// 当前距离
-		CurrentDistance += ActualInterval + IntervalModelLength;
-		// 临时坐标
-		FTransform ATransforms = Spline->GetTransformAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World, true);
-		// 设置缩放
-		ATransforms.SetScale3D(ATransforms.GetScale3D() * Size);
-		// 添加到数组
-		TempTransforms.Add(ATransforms);
-	}
+		// 根据显示数量生成临时坐标
+		for (int i = 0; i <= DisplayNum - 1; i++)
+		{
+			// 余数
+			int32 TempIndex = i % ModelNum;
+			// 实际编号
+			int32 ActualNumber = TempIndex == 0 ? ModelNum - 1 : TempIndex - 1;
+			// 实际间隔
+			float ActualInterval = i == 0 ? 0.f : Interval;
+			// 当前模型长度
+			float IntervalModelLength = i == 0 ? 0.f : ModelLengths[ActualNumber];
+			// 当前距离
+			CurrentDistance += ActualInterval + IntervalModelLength;
+			// 临时坐标
+			FTransform ATransforms = Spline->GetTransformAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World, true);
+			// 设置缩放
+			ATransforms.SetScale3D(ATransforms.GetScale3D() * Size);
+			// 添加到数组
+			TempTransforms.Add(ATransforms);
+		}
+	}, TStatId(), nullptr, ENamedThreads::Type::AnyThread);
+	// 等待任务完成
+	FTaskGraphInterface::Get().WaitUntilTaskCompletes(TransformsTask);
+
 	// 返回临时坐标数组
 	return TempTransforms;
 }
@@ -120,30 +154,16 @@ void AFenceSpline::AddDisplayModel()
 	int32 ModelNum = DisplayModel.Num();
 
 	// 遍历显示模型数组，为每个模型创建一个层级实例静态网格组件
-	for (auto* StaticMesh : DisplayModel)
+	for (int32 i = 0; i < ModelNum; i++)
 	{
 		// 确保模型指针不为空
-		if (StaticMesh != nullptr)
+		if (DisplayModel[i] != nullptr)
 		{
 			// 实例化网格组件
 			UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this);
 			if (HISMComponent)
 			{
-				// 注册网格组件
-				HISMComponent->RegisterComponent();
-				// 设置网格组件的附着关系，使其附着到根组件
-				HISMComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepWorldTransform);
-				// 禁用碰撞，因为此组件不需要与其他物体发生物理碰撞
-				HISMComponent->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
-				// 在游戏中显示网格组件
-				HISMComponent->SetHiddenInGame(false);
-				// 设置网格组件不接收贴花，简化渲染处理
-				HISMComponent->bReceivesDecals = false;
-				// 为网格组件设置静态网格，即定义其外观
-				HISMComponent->SetStaticMesh(StaticMesh);
-				// 设置网格组件的材质参数，此处为营地颜色
-				HISMComponent->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
-				// 将网格组件添加到组件列表中，以便后续管理和使用
+				InitializeComponent(HISMComponent, DisplayModel[i]);
 				InstancedStaticMeshComponents.Add(HISMComponent);
 			}
 		}
@@ -166,6 +186,7 @@ void AFenceSpline::AddDisplayModel()
 	}
 }
 
+// 生成围栏
 void AFenceSpline::GeneratingFences()
 {
 	if (DisplayModel.IsEmpty()) return;
@@ -178,34 +199,40 @@ void AFenceSpline::GeneratingFences()
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	// 遍历临时变换数组，用于在特定位置生成单个围栏对象
-	for (auto SpawnTransform : TempTransforms)
+	// 创建一个异步任务，处理坐标数组
+	FGraphEventRef SpawnTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this,ModelNum,&index,World,&TempTransforms,&SpawnParameters]()
 	{
-		// 如果单个围栏类为空，则跳出循环，防止无效操作
-		if (SingleFenceClass == nullptr) break;
-
-		// 在指定的位置和参数下生成单个围栏对象
-		if (ASingleFence_Base* SingleFence_Base = World->SpawnActor<ASingleFence_Base>(SingleFenceClass, SpawnTransform, SpawnParameters))
+		// 遍历临时变换数组，用于在特定位置生成单个围栏对象
+		for (auto SpawnTransform : TempTransforms)
 		{
-			// 将生成的围栏对象附加到当前对象上，保持其在世界中的变换
-			SingleFence_Base->AttachToActor(this, FAttachmentTransformRules::KeepWorldTransform);
+			// 如果单个围栏类为空，则跳出循环，防止无效操作
+			if (SingleFenceClass == nullptr) break;
 
-			// 设置围栏对象的显示模型，根据索引选择合适的模型
-			SingleFence_Base->SetFenceMesh(DisplayModel[index % ModelNum]);
+			// 在指定的位置和参数下生成单个围栏对象
+			if (ASingleFence_Base* SingleFence_Base = World->SpawnActor<ASingleFence_Base>(SingleFenceClass, SpawnTransform, SpawnParameters))
+			{
+				// 将生成的围栏对象附加到当前对象上，保持其在世界中的变换
+				SingleFence_Base->AttachToComponent(Spline, FAttachmentTransformRules::KeepWorldTransform);
 
-			// 设置围栏对象的阵营颜色，使其与当前对象一致
-			SingleFence_Base->SetCampColor(CampColor);
+				// 设置围栏对象的显示模型，根据索引选择合适的模型
+				SingleFence_Base->SetFenceMesh(DisplayModel[index % ModelNum]);
 
-			// 初始化围栏对象的基础属性
-			SingleFence_Base->InitBase();
+				// 设置围栏对象的阵营颜色，使其与当前对象一致
+				SingleFence_Base->SetCampColor(CampColor);
 
-			// 将围栏对象添加到列表中，便于后续管理
-			AllSingleFences.AddUnique(SingleFence_Base);
+				// 初始化围栏对象的基础属性
+				SingleFence_Base->InitBase();
 
-			// 增加索引，用于选择下一个模型或颜色等
-			index++;
+				// 将围栏对象添加到列表中，便于后续管理
+				AllSingleFences.AddUnique(SingleFence_Base);
+
+				// 增加索引，用于选择下一个模型或颜色等
+				index++;
+			}
 		}
-	}
+	}, TStatId(), nullptr, ENamedThreads::Type::GameThread);
+	// 等待任务完成
+	FTaskGraphInterface::Get().WaitUntilTaskCompletes(SpawnTask);
 
 	// 反转数组
 	ReverseTArray(AllSingleFences);
