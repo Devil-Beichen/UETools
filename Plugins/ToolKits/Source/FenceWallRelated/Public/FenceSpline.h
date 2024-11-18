@@ -29,9 +29,13 @@ public:
 	UPROPERTY(EditAnywhere, Category="默认")
 	TSubclassOf<ASingleFence_Base> SingleFenceClass;
 
-	// 显示模型
+	// 默认显示
 	UPROPERTY(EditAnywhere, Category="默认")
-	TArray<UStaticMesh*> DisplayModel;
+	uint8 bDefaultDisplay : 1;
+
+	// 显示模型的数量
+	UPROPERTY(EditAnywhere, Category="默认")
+	TArray<UStaticMesh*> DisplayModelNum;
 
 	// 显示数量
 	UPROPERTY(EditAnywhere, Category="默认")
@@ -63,13 +67,6 @@ protected:
 	* @param NewStaticMesh 新的静态网格
 	*/
 	void InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh);
-
-	/**
-	 * 更新围栏组件
-	 * @param Component 围栏组件
-	 * @param NewStaticMesh 新的静态网格
-	 */
-	void UpdateComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh);
 
 private:
 	// 获取模型长度
