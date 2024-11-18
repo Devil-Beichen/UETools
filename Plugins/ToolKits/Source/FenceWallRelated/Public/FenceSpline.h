@@ -33,9 +33,9 @@ public:
 	UPROPERTY(EditAnywhere, Category="默认")
 	uint8 bDefaultDisplay : 1;
 
-	// 显示模型的数量
+	// 显示模型
 	UPROPERTY(EditAnywhere, Category="默认")
-	TArray<UStaticMesh*> DisplayModelNum;
+	TArray<UStaticMesh*> DisplayModels;
 
 	// 显示数量
 	UPROPERTY(EditAnywhere, Category="默认")
