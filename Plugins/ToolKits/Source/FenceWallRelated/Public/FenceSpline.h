@@ -57,6 +57,10 @@ public:
 	UPROPERTY(EditAnywhere, Category="默认")
 	FLinearColor CampColor = FLinearColor::Green;
 
+	// 所有围栏
+	UPROPERTY(Blueprintable, Category="默认")
+	TArray<TObjectPtr<ASingleFence_Base>> AllSingleFences;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -78,12 +82,11 @@ private:
 	// 添加显示模型
 	void AddDisplayModel();
 
-	// 所有围栏
-	UPROPERTY()
-	TArray<TObjectPtr<ASingleFence_Base>> AllSingleFences;
-
 public:
 	// 生成围栏
 	UFUNCTION(BlueprintCallable, Category="默认")
 	void GeneratingFences();
+
+	// 获取所有围栏
+	FORCEINLINE TArray<TObjectPtr<ASingleFence_Base>> GetAllSingleFences() const { return AllSingleFences; };
 };

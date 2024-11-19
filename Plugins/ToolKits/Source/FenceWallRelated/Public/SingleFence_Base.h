@@ -140,6 +140,9 @@ public:
 		FenceMesh = NewStaticMesh;
 	}
 
+	// 获取围栏模型
+	FORCEINLINE TObjectPtr<UStaticMesh> GetFenceMesh() const { return FenceMesh; }
+
 	// 设置阵营颜色
 	FORCEINLINE void SetCampColor(const FLinearColor NewColor)
 	{
