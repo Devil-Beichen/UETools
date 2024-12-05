@@ -139,7 +139,7 @@ public:
 	void AddDisplayModel();
 
 	// 所有围栏
-	UPROPERTY(Blueprintable, Category="默认")
+	UPROPERTY(BlueprintReadOnly, Category="默认")
 	TArray<TObjectPtr<ASingleFence_Base>> AllSingleFences;
 
 	// 生成围栏
