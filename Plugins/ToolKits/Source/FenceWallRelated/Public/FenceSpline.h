@@ -26,15 +26,19 @@ public:
 	TObjectPtr<USplineComponent> Spline;
 
 	// 单一围栏
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "围栏类"))
 	TSubclassOf<ASingleFence_Base> SingleFenceClass;
 
+	// 默认显示
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "默认显示"))
+	uint8 bDefaultDisplay : 1;
+
 	// 显示模型
-	UPROPERTY(EditAnywhere, Category="默认")
-	TArray<UStaticMesh*> DisplayModel;
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "显示的模型"))
+	TArray<UStaticMesh*> DisplayModels;
 
 	// 显示数量
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "显示数量"))
 	int32 DisplayNum = 1;
 
 	// 实例化网格
@@ -42,16 +46,20 @@ public:
 	TArray<UHierarchicalInstancedStaticMeshComponent*> InstancedStaticMeshComponents;
 
 	// 模型大小
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "模型大小"))
 	float Size = 1.f;
 
 	// 间距
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "间距"))
 	float Interval = 2.f;
 
 	// 颜色
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "颜色"))
 	FLinearColor CampColor = FLinearColor::Green;
+
+	// 所有围栏
+	UPROPERTY(BlueprintReadOnly, Category="默认")
+	TArray<TObjectPtr<ASingleFence_Base>> AllSingleFences;
 
 protected:
 	virtual void BeginPlay() override;
@@ -64,13 +72,6 @@ protected:
 	*/
 	void InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh);
 
-	/**
-	 * 更新围栏组件
-	 * @param Component 围栏组件
-	 * @param NewStaticMesh 新的静态网格
-	 */
-	void UpdateComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh);
-
 private:
 	// 获取模型长度
 	FVector GetMeshLength(int32 Index);
@@ -81,12 +82,11 @@ private:
 	// 添加显示模型
 	void AddDisplayModel();
 
-	// 所有围栏
-	UPROPERTY()
-	TArray<TObjectPtr<ASingleFence_Base>> AllSingleFences;
-
 public:
 	// 生成围栏
 	UFUNCTION(BlueprintCallable, Category="默认")
 	void GeneratingFences();
+
+	// 获取所有围栏
+	FORCEINLINE TArray<TObjectPtr<ASingleFence_Base>> GetAllSingleFences() const { return AllSingleFences; };
 };

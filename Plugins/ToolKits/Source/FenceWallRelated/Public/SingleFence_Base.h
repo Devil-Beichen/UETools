@@ -58,10 +58,10 @@ protected:
 	TObjectPtr<UStaticMeshComponent> FenceMeshComponent;
 
 	// 围栏模型
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "模型"))
 	TObjectPtr<UStaticMesh> FenceMesh;
 	// 阵营颜色
-	UPROPERTY(EditAnywhere, Category="默认")
+	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "颜色"))
 	FLinearColor CampColor = FLinearColor::Green;
 
 	// 是否可以震动
@@ -139,6 +139,9 @@ public:
 	{
 		FenceMesh = NewStaticMesh;
 	}
+
+	// 获取围栏模型
+	FORCEINLINE TObjectPtr<UStaticMesh> GetFenceMesh() const { return FenceMesh; }
 
 	// 设置阵营颜色
 	FORCEINLINE void SetCampColor(const FLinearColor NewColor)

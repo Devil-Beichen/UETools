@@ -4,12 +4,15 @@
 #include "SingleFence_Base.h"
 #include "Components/TimelineComponent.h"
 #include "Components/BoxComponent.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 ASingleFence_Base::ASingleFence_Base()
 {
 	// 设置此actor的tick 为false 
+	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.bCanEverTick = false;
-
+	
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
 
 	Box = CreateDefaultSubobject<UBoxComponent>(TEXT("Box"));

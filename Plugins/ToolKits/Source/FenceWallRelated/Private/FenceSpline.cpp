@@ -7,12 +7,15 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SplineComponent.h"
 #include "YCTArray.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
 
 // Sets default values
-AFenceSpline::AFenceSpline()
+AFenceSpline::AFenceSpline(): bDefaultDisplay(true)
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// 关闭Tick
 	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
 	SetRootComponent(RootComponent);
@@ -33,6 +36,7 @@ void AFenceSpline::OnConstruction(const FTransform& Transform)
 	AddDisplayModel();
 }
 
+// 初始化网格组件
 void AFenceSpline::InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh)
 {
 	// 注册网格组件
@@ -51,14 +55,6 @@ void AFenceSpline::InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMe
 	Component->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
 }
 
-void AFenceSpline::UpdateComponent(TObjectPtr<UHierarchicalInstancedStaticMeshComponent> Component, TObjectPtr<UStaticMesh> NewStaticMesh)
-{
-	// 为网格组件设置静态网格，即定义其外观
-	Component->SetStaticMesh(NewStaticMesh);
-	// 设置网格组件的材质参数，此处为营地颜色
-	Component->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
-}
-
 /**
  * 根据索引获取围栏组件的网格长度
  * 
@@ -68,10 +64,10 @@ void AFenceSpline::UpdateComponent(TObjectPtr<UHierarchicalInstancedStaticMeshCo
 FVector AFenceSpline::GetMeshLength(int32 Index)
 {
 	// 检查索引对应的围栏组件是否存在
-	if (DisplayModel[Index])
+	if (DisplayModels[Index])
 	{
 		// 如果存在，计算并返回网格长度
-		return DisplayModel[Index]->GetBounds().BoxExtent * 2.f * Size;
+		return DisplayModels[Index]->GetBounds().BoxExtent * 2.f * Size;
 	}
 	else
 	{
@@ -84,11 +80,11 @@ FVector AFenceSpline::GetMeshLength(int32 Index)
 TArray<FTransform> AFenceSpline::GetTempTransforms()
 {
 	// 模型数量为0 或者 显示数量为0
-	if (DisplayModel.Num() <= 0 || DisplayNum <= 0) return TArray<FTransform>();
+	if (DisplayModels.Num() <= 0 || DisplayNum <= 0) return TArray<FTransform>();
 	// 获取曲线
 	if (!Spline) return TArray<FTransform>();
 	// 模型数量
-	int32 ModelNum = DisplayModel.Num();
+	int32 ModelNum = DisplayModels.Num();
 	// 临时坐标数组
 	TArray<FTransform> TempTransforms = TArray<FTransform>();
 	// 当前所在的临时距离
@@ -136,78 +132,97 @@ TArray<FTransform> AFenceSpline::GetTempTransforms()
 void AFenceSpline::AddDisplayModel()
 {
 	// 如果显示模型数组为空或显示数量小于等于0，则直接返回
-	if (DisplayModel.IsEmpty() || DisplayNum <= 0) return;
+	if (DisplayModels.IsEmpty() || DisplayNum <= 0) return;
 
-	// 如果实例静态网格组件数组不为空，则清除所有实例并清空数组
+	// 清空实例数组
 	if (!InstancedStaticMeshComponents.IsEmpty())
 	{
 		for (auto* StaticMeshComponent : InstancedStaticMeshComponents)
 		{
 			// 添加空指针检查,清除实例并清空数组
 			if (StaticMeshComponent != nullptr)
+			{
+				// 清除实例
 				StaticMeshComponent->ClearInstances();
+				if (StaticMeshComponent->IsRegistered()) // 检查是否已注册
+				{
+					StaticMeshComponent->UnregisterComponent(); // 卸载组件
+				}
+				StaticMeshComponent->DestroyComponent();
+			}
 		}
 		InstancedStaticMeshComponents.Empty();
 	}
 
 	// 模型数量
-	int32 ModelNum = DisplayModel.Num();
+	int32 ModelNum = DisplayModels.Num();
 
-	// 遍历显示模型数组，为每个模型创建一个层级实例静态网格组件
-	for (int32 i = 0; i < ModelNum; i++)
+	// 预分配实例数组
+	InstancedStaticMeshComponents.Reserve(ModelNum);
+
+	// 创建一个异步任务，处理实例静态网格组件
+	FGraphEventRef ComponentTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this,ModelNum]()
 	{
-		// 确保模型指针不为空
-		if (DisplayModel[i] != nullptr)
+		// 遍历显示模型数组，为每个模型创建一个层级实例静态网格组件
+		for (int32 i = 0; i < ModelNum; i++)
 		{
-			// 实例化网格组件
-			UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this);
-			if (HISMComponent)
+			// 确保模型指针不为空
+			if (DisplayModels[i] != nullptr)
 			{
-				InitializeComponent(HISMComponent, DisplayModel[i]);
-				InstancedStaticMeshComponents.Add(HISMComponent);
+				// 实例化网格组件
+				UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this);
+				if (HISMComponent)
+				{
+					InitializeComponent(HISMComponent, DisplayModels[i]);
+					InstancedStaticMeshComponents.Add(HISMComponent);
+				}
 			}
 		}
-	}
+	}, TStatId(), nullptr, ENamedThreads::Type::GameThread);
+	// 等待任务完成
+	FTaskGraphInterface::Get().WaitUntilTaskCompletes(ComponentTask);
 
-	// 获取临时变换数组
-	TArray<FTransform> TempFTransforms = GetTempTransforms();
-
-	// 临时变量，用于记录当前实例化的模型编号
-	int TempNum = 0;
-	// 遍历临时变换数组，为每个变换添加实例
-	for (auto StaticMeshTransform : TempFTransforms)
+	FGraphEventRef AddMeshTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this,ModelNum]()
 	{
-		// 确保数组索引有效
-		if (InstancedStaticMeshComponents.IsValidIndex(TempNum % ModelNum))
+		// 获取临时变换数组
+		TArray<FTransform> TempFTransforms = GetTempTransforms();
+
+		// 临时变量，用于记录当前实例化的模型编号
+		int TempNum = 0;
+		// 遍历临时变换数组，为每个变换添加实例
+		for (auto StaticMeshTransform : TempFTransforms)
 		{
-			InstancedStaticMeshComponents[TempNum % ModelNum]->AddInstance(StaticMeshTransform, true);
-			TempNum++;
+			// 确保数组索引有效
+			if (InstancedStaticMeshComponents.IsValidIndex(TempNum % ModelNum))
+			{
+				InstancedStaticMeshComponents[TempNum % ModelNum]->AddInstance(StaticMeshTransform, true);
+				TempNum++;
+			}
 		}
-	}
+	}, TStatId(), nullptr, ENamedThreads::Type::GameThread);
+	FTaskGraphInterface::Get().WaitUntilTaskCompletes(AddMeshTask);
 }
 
 // 生成围栏
 void AFenceSpline::GeneratingFences()
 {
-	if (DisplayModel.IsEmpty()) return;
+	if (DisplayModels.IsEmpty() || SingleFenceClass == nullptr) return;
 	TArray<FTransform> TempTransforms = GetTempTransforms();
 	UWorld* World = GetWorld();
 	if (TempTransforms.IsEmpty() || World == nullptr) return;
-	// 模型数量
-	int32 ModelNum = DisplayModel.Num();
-	int index = 0;
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	// 创建一个异步任务，处理坐标数组
-	FGraphEventRef SpawnTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this,ModelNum,&index,World,&TempTransforms,&SpawnParameters]()
+	// 创建一个异步任务，用于生成围栏对象
+	FGraphEventRef SpawnTask = FFunctionGraphTask::CreateAndDispatchWhenReady([this,World,&TempTransforms]()
 	{
+		// 模型数量
+		int32 ModelNum = DisplayModels.Num();
+		int index = 0;
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
 		// 遍历临时变换数组，用于在特定位置生成单个围栏对象
 		for (auto SpawnTransform : TempTransforms)
 		{
-			// 如果单个围栏类为空，则跳出循环，防止无效操作
-			if (SingleFenceClass == nullptr) break;
-
 			// 在指定的位置和参数下生成单个围栏对象
 			if (ASingleFence_Base* SingleFence_Base = World->SpawnActor<ASingleFence_Base>(SingleFenceClass, SpawnTransform, SpawnParameters))
 			{
@@ -215,13 +230,16 @@ void AFenceSpline::GeneratingFences()
 				SingleFence_Base->AttachToComponent(Spline, FAttachmentTransformRules::KeepWorldTransform);
 
 				// 设置围栏对象的显示模型，根据索引选择合适的模型
-				SingleFence_Base->SetFenceMesh(DisplayModel[index % ModelNum]);
+				SingleFence_Base->SetFenceMesh(DisplayModels[index % ModelNum]);
 
 				// 设置围栏对象的阵营颜色，使其与当前对象一致
 				SingleFence_Base->SetCampColor(CampColor);
 
 				// 初始化围栏对象的基础属性
 				SingleFence_Base->InitBase();
+
+				// 设置围栏对象是否可见，根据默认显示设置
+				SingleFence_Base->SetActorHiddenInGame(!bDefaultDisplay);
 
 				// 将围栏对象添加到列表中，便于后续管理
 				AllSingleFences.AddUnique(SingleFence_Base);
