@@ -1,0 +1,6 @@
+float a = A;
+float b = B;
+
+float c = a + b;
+
+return c;
