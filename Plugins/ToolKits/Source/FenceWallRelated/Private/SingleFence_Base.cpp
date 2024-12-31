@@ -38,6 +38,7 @@ void ASingleFence_Base::BeginPlay()
 	InitBase();
 	InitBind();
 	StartSize = FenceMeshComponent->GetComponentScale();
+	DefaultMaterials = FenceMeshComponent->GetMaterials();
 }
 
 // 构造函数
@@ -106,6 +107,7 @@ void ASingleFence_Base::ShowFence_Implementation()
 	{
 		ScalePlay();
 		SetActorHiddenInGame(false);
+		StartGreenFilm();
 	}
 }
 
@@ -139,6 +141,36 @@ void ASingleFence_Base::FenceHit_Implementation(const bool CanShake, const float
 void ASingleFence_Base::RemoveFence_Implementation()
 {
 	Destroy();
+}
+
+// 开启绿膜材质
+void ASingleFence_Base::StartGreenFilm()
+{
+	if (bSetGreenFilm && GreenFilmMaterial)
+	{
+		for (int32 i = 0; i < FenceMeshComponent->GetMaterials().Num(); i++)
+		{
+			FenceMeshComponent->SetMaterial(i, GreenFilmMaterial);
+		}
+	}
+
+	if (GreenFilmTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(GreenFilmTimerHandle);
+	}
+	GetWorld()->GetTimerManager().SetTimer(GreenFilmTimerHandle, this, &ASingleFence_Base::GreenFilmFinish, GreenFilmTime);
+}
+
+// 绿膜材质结束
+void ASingleFence_Base::GreenFilmFinish()
+{
+	if (!DefaultMaterials.IsEmpty())
+	{
+		for (int32 i = 0; i < DefaultMaterials.Num(); i++)
+		{
+			FenceMeshComponent->SetMaterial(i, DefaultMaterials[i]);
+		}
+	}
 }
 
 // 播放缩放动画

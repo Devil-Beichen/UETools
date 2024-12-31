@@ -43,7 +43,7 @@ public:
 	int32 DisplayNum = 10;
 
 	// 实例化网格
-	UPROPERTY()
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="默认", meta=(DisplayName = "实例化网格"))
 	TArray<TObjectPtr<UHierarchicalInstancedStaticMeshComponent>> InstancedStaticMeshComponents;
 
 	// 模型大小

@@ -195,9 +195,6 @@ void AHelicalFence::SetSplineLocation()
 // 添加显示模型
 void AHelicalFence::AddDisplayModel()
 {
-	// 如果显示模型数组为空或显示数量小于等于0，则直接返回
-	if (DisplayModels.IsEmpty() || DisplayNum <= 0 || Spline == nullptr) return;
-
 	// 清空实例数组
 	if (!InstancedStaticMeshComponents.IsEmpty())
 	{
@@ -218,6 +215,9 @@ void AHelicalFence::AddDisplayModel()
 		InstancedStaticMeshComponents.Empty();
 	}
 
+	// 如果显示模型数组为空或显示数量小于等于0，则直接返回
+	if (DisplayModels.IsEmpty() || DisplayNum <= 0 || Spline == nullptr) return;
+
 	// 模型数量
 	int32 ModelNum = DisplayModels.Num();
 
@@ -233,8 +233,9 @@ void AHelicalFence::AddDisplayModel()
 			// 确保模型指针不为空
 			if (DisplayModels[i] != nullptr)
 			{
-				// 实例化网格组件
-				UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this);
+				FString ComponentName = FString::Printf(TEXT("HISMComponent_%d"), i);
+				// 创建层级实例静态网格组件
+				UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *ComponentName);
 				if (HISMComponent)
 				{
 					InitializeComponent(HISMComponent, DisplayModels[i]);

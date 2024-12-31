@@ -53,6 +53,8 @@ void AFenceSpline::InitializeComponent(TObjectPtr<UHierarchicalInstancedStaticMe
 	Component->SetStaticMesh(NewStaticMesh);
 	// 设置网格组件的材质参数，此处为营地颜色
 	Component->SetVectorParameterValueOnMaterials("CampColor", FVector(CampColor.R, CampColor.G, CampColor.B));
+
+	// 像用CreateDefaultSubobject一样显示网格组件
 }
 
 /**
@@ -131,13 +133,10 @@ TArray<FTransform> AFenceSpline::GetTempTransforms()
 // 本函数负责将DisplayModel数组中的模型添加到InstancedStaticMeshComponents中，并根据临时变换数组生成实例
 void AFenceSpline::AddDisplayModel()
 {
-	// 如果显示模型数组为空或显示数量小于等于0，则直接返回
-	if (DisplayModels.IsEmpty() || DisplayNum <= 0) return;
-
 	// 清空实例数组
 	if (!InstancedStaticMeshComponents.IsEmpty())
 	{
-		for (auto* StaticMeshComponent : InstancedStaticMeshComponents)
+		for (auto& StaticMeshComponent : InstancedStaticMeshComponents)
 		{
 			// 添加空指针检查,清除实例并清空数组
 			if (StaticMeshComponent != nullptr)
@@ -154,6 +153,9 @@ void AFenceSpline::AddDisplayModel()
 		InstancedStaticMeshComponents.Empty();
 	}
 
+	// 如果显示模型数组为空或显示数量小于等于0，则直接返回
+	if (DisplayModels.IsEmpty() || DisplayNum <= 0)return;
+
 	// 模型数量
 	int32 ModelNum = DisplayModels.Num();
 
@@ -169,8 +171,9 @@ void AFenceSpline::AddDisplayModel()
 			// 确保模型指针不为空
 			if (DisplayModels[i] != nullptr)
 			{
-				// 实例化网格组件
-				UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this);
+				FString ComponentName = FString::Printf(TEXT("HISMComponent_%d"), i);
+				// 创建层级实例静态网格组件
+				UHierarchicalInstancedStaticMeshComponent* HISMComponent = NewObject<UHierarchicalInstancedStaticMeshComponent>(this, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *ComponentName);
 				if (HISMComponent)
 				{
 					InitializeComponent(HISMComponent, DisplayModels[i]);

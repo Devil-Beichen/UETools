@@ -64,6 +64,30 @@ protected:
 	UPROPERTY(EditAnywhere, Category="默认", meta=(DisplayName = "颜色"))
 	FLinearColor CampColor = FLinearColor::Green;
 
+	// 是否设置绿膜材质
+	UPROPERTY(EditDefaultsOnly, Category="默认")
+	uint8 bSetGreenFilm : 1;
+	// 默认材质
+	UPROPERTY()
+	TArray<UMaterialInterface*> DefaultMaterials;
+	// 绿膜材质
+	UPROPERTY(EditDefaultsOnly, Category="默认")
+	UMaterialInterface* GreenFilmMaterial;
+
+	// 绿膜材质计时器
+	FTimerHandle GreenFilmTimerHandle;
+
+	// 开启绿膜材质
+	void StartGreenFilm();
+
+	// 绿膜材质结束
+	UFUNCTION()
+	void GreenFilmFinish();
+
+	// 绿膜材质持续时间
+	UPROPERTY(EditDefaultsOnly, Category="默认")
+	float GreenFilmTime = 0.15f;
+
 	// 是否可以震动
 	uint8 bCanShake : 1;
 
