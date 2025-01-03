@@ -101,9 +101,15 @@ void AHelicalFence::Tick(float DeltaTime)
 	}
 	else
 	{
-		for (auto& SingleFences : AllSingleFences)
+		if (!AllSingleFences.IsEmpty())
 		{
-			SingleFences->SetActorHiddenInGame(IsHidden()); // 隐藏
+			for (auto& SingleFences : AllSingleFences)
+			{
+				if (SingleFences)
+				{
+					SingleFences->SetActorHiddenInGame(IsHidden()); // 隐藏
+				}
+			}
 		}
 	}
 }

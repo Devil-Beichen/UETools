@@ -20,7 +20,7 @@
 static FString MyKey = FString::Printf(TEXT("YiChen"));
 
 // 许可证到期日期
-static FString LicenceTime = "2025.01.01-00.00.00"; // 年/月/日-时/分/秒
+static FString LicenceTime = "2026.01.01-00.00.00"; // 年/月/日-时/分/秒
 
 // 缓存的有效时间（秒）
 static constexpr int32 CacheDuration = 60 * 60 * 24 * 1; // 60 * 60 * 24 * 1; // （60*60 = 1小时） 缓存1天

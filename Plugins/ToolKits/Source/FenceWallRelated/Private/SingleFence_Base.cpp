@@ -7,12 +7,12 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
-ASingleFence_Base::ASingleFence_Base()
+ASingleFence_Base::ASingleFence_Base(): bSetGreenFilm(true)
 {
 	// 设置此actor的tick 为false 
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.bCanEverTick = false;
-	
+
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
 
 	Box = CreateDefaultSubobject<UBoxComponent>(TEXT("Box"));
