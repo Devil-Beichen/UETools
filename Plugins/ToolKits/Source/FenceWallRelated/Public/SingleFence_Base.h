@@ -183,4 +183,7 @@ public:
 	 * @param NewCurve 击中曲线
 	 */
 	FORCEINLINE void SetHitFloat(const TObjectPtr<UCurveFloat> NewCurve) { if (NewCurve)HitCurve = *NewCurve; };
+
+	// 获取碰撞盒
+	FORCEINLINE UBoxComponent* GetBox() const { return Box; }
 };

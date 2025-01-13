@@ -6,6 +6,7 @@
 #include "FenceSpline.h"
 #include "SingleFence_Base.h"
 #include "YCTArray.h"
+#include "Components/BoxComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SplineComponent.h"
 
@@ -105,6 +106,7 @@ void AHelicalFence::Tick(float DeltaTime)
 		{
 			for (auto& SingleFences : AllSingleFences)
 			{
+				if (!SingleFences->IsValidLowLevel()) continue;
 				if (SingleFences)
 				{
 					SingleFences->SetActorHiddenInGame(IsHidden()); // 隐藏
@@ -348,7 +350,9 @@ void AHelicalFence::GeneratingFences()
 
 				// 初始化围栏对象的基础属性
 				SingleFence_Base->InitBase();
-
+				// 设置围栏对象的碰撞启用状态，使其无法被碰撞检测
+				SingleFence_Base->GetBox()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				
 				// 将围栏对象添加到列表中，便于后续管理
 				AllSingleFences.AddUnique(SingleFence_Base);
 
@@ -390,6 +394,11 @@ void AHelicalFence::FenceHidden()
 
 		for (auto& SingleFences : AllSingleFences)
 		{
+			if (!SingleFences->IsValidLowLevel())
+			{
+				Index++;
+				continue;
+			}
 			if (SingleFences && SingleFences->GetFenceMesh())
 			{
 				// 计算当前围栏对象与下一个围栏对象之间的距离
